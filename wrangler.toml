@@ -9,7 +9,10 @@ run_worker_first = ["/api/*"]
 
 [[kv_namespaces]]
 binding = "DB"
-id = "ВСТАВЬ_ID_KV"
+id = ""kv_namespaces": [{
+                    "binding": "KV_BINDING",
+                    "id": "232a8f4c275b4932be01cf160eaec7fb"
+                 }]"
 
 [vars]
-OWNER_ID = "ВСТАВЬ_СВОЙ_TELEGRAM_ID"
+OWNER_ID = "6894849502"
