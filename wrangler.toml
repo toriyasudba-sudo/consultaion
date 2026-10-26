@@ -1,0 +1,15 @@
+name = "consultation"
+main = "src/worker.js"
+compatibility_date = "2025-01-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[[kv_namespaces]]
+binding = "DB"
+id = "ВСТАВЬ_ID_KV"
+
+[vars]
+OWNER_ID = "ВСТАВЬ_СВОЙ_TELEGRAM_ID"
