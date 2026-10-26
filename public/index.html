@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Запись на консультацию</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script>
+tailwind.config={theme:{extend:{colors:{primary:{50:'#f4f6fb',100:'#e6ebf5',500:'#5c76b7',600:'#475d97',700:'#384977'}}}}}
+</script>
+<style>body{font-family:'Inter',system-ui,sans-serif;background:#f4f6fb;color:#1e293b}</style>
+</head>
+<body class="min-h-screen flex justify-center py-4 px-3">
+<div class="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col min-h-[640px] relative border border-slate-100">
+
+<header class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+  <div class="flex items-center space-x-2.5">
+    <div class="w-9 h-9 rounded-xl bg-primary-100 text-primary-600 flex items-center justify-center"><i class="fa-solid fa-comments"></i></div>
+    <div>
+      <h1 class="text-sm font-bold leading-tight">Консультация</h1>
+      <p class="text-xs text-slate-400" id="app-subtitle">Запись на разговор</p>
+    </div>
+  </div>
+  <!-- Скрыта для всех, кроме @toriya_nova в Telegram -->
+  <button id="dashboard-toggle-btn" onclick="openTeacherAuthModal()" class="hidden text-xs font-medium px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 items-center space-x-1.5">
+    <i class="fa-solid fa-lock text-primary-600" id="lock-icon"></i><span>Кабинет</span>
+  </button>
+</header>
+
+<div id="toast" class="absolute top-16 left-4 right-4 z-50 -translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+  <div class="bg-slate-900 text-white text-xs px-4 py-3 rounded-2xl shadow-xl" id="toast-message"></div>
+</div>
+
+<div id="auth-modal" class="absolute inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-5 hidden">
+  <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl space-y-4">
+    <div class="text-center">
+      <h3 class="text-base font-bold">Вход в кабинет</h3>
+      <p class="text-xs text-slate-500 mt-1">Введите пароль</p>
+    </div>
+    <input type="password" inputmode="numeric" id="auth-input" placeholder="Пароль" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm outline-none bg-slate-50">
+    <button onclick="verifyTeacherAccess()" class="w-full py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-xs rounded-xl">Войти</button>
+    <button onclick="closeTeacherAuthModal()" class="w-full py-2 text-slate-400 text-xs">Отмена</button>
+  </div>
+</div>
+
+<!-- КЛИЕНТСКАЯ ЧАСТЬ -->
+<div id="client-flow" class="flex-1 flex flex-col">
+
+  <div id="screen-1" class="screen flex-1 p-6 flex flex-col justify-between">
+    <div class="space-y-6 pt-4">
+      <div class="rounded-2xl bg-gradient-to-br from-primary-600 to-primary-700 p-6 text-white shadow-lg">
+        <span class="inline-block px-3 py-1 rounded-full bg-white/20 text-xs font-medium mb-3">Личный разговор</span>
+        <h2 class="text-2xl font-bold mb-2">Запись на консультацию</h2>
+        <p class="text-primary-100 text-sm leading-relaxed">Пространство для спокойного разговора о вашем ребёнке — во благо его развития.</p>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div class="flex items-start space-x-3 p-3.5 rounded-xl bg-violet-50">
+          <i class="fa-solid fa-star text-violet-500 mt-0.5"></i>
+          <div><h4 class="font-semibold">Увидим сильные стороны</h4><p class="text-slate-500">Обсудим успехи и то, чем ребёнок может гордиться</p></div>
+        </div>
+        <div class="flex items-start space-x-3 p-3.5 rounded-xl bg-emerald-50">
+          <i class="fa-solid fa-seedling text-emerald-500 mt-0.5"></i>
+          <div><h4 class="font-semibold">Бережно посмотрим на трудности</h4><p class="text-slate-500">Поймём, что поддержит ребёнка и где ему нужна помощь</p></div>
+        </div>
+        <div class="flex items-start space-x-3 p-3.5 rounded-xl bg-amber-50">
+          <i class="fa-solid fa-handshake text-amber-500 mt-0.5"></i>
+          <div><h4 class="font-semibold">Договоримся о шагах</h4><p class="text-slate-500">Вместе наметим, как идти дальше — дома и в школе</p></div>
+        </div>
+      </div>
+    </div>
+    <button onclick="goToScreen(2)" class="mt-6 w-full py-4 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-2xl shadow-lg active:scale-95 transition">
+      Записаться на консультацию <i class="fa-solid fa-arrow-right text-sm ml-1"></i>
+    </button>
+  </div>
+
+  <div id="screen-2" class="screen flex-1 p-6 flex flex-col justify-between hidden">
+    <div class="space-y-5">
+      <div class="flex items-center justify-between">
+        <button onclick="goToScreen(1)" class="text-slate-400 text-xs"><i class="fa-solid fa-chevron-left"></i> Назад</button>
+        <span class="text-xs font-bold text-primary-600 bg-primary-50 px-2.5 py-1 rounded-full">Шаг 1 из 2</span>
+      </div>
+      <div>
+        <h2 class="text-xl font-bold">Знакомство и время</h2>
+        <p class="text-xs text-slate-500 mt-1">Назовите ребёнка и выберите удобное время</p>
+      </div>
+      <div class="space-y-1.5">
+        <label class="block text-xs font-semibold">Имя и фамилия ребёнка <span class="text-rose-500">*</span></label>
+        <input type="text" id="student-name" placeholder="например, Максим Смирнов" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary-500 text-sm outline-none bg-slate-50">
+      </div>
+      <div class="space-y-1.5">
+        <label class="block text-xs font-semibold">Как с вами связаться</label>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="user-telegram" readonly class="px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-100 text-slate-600" placeholder="Telegram">
+          <input type="tel" id="user-phone" placeholder="Телефон (по желанию)" class="px-3 py-2.5 rounded-xl border border-slate-200 text-xs bg-slate-50 outline-none">
+        </div>
+      </div>
+      <div class="space-y-2">
+        <label class="block text-xs font-semibold">Свободное время <span class="text-rose-500">*</span></label>
+        <div id="available-slots-container" class="space-y-2.5 max-h-44 overflow-y-auto"></div>
+        <p id="no-slots-msg" class="text-xs text-slate-400 italic hidden text-center py-2">Свободного времени пока нет — загляните позже.</p>
+      </div>
+    </div>
+    <button onclick="goToScreen(3)" class="mt-4 w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-2xl active:scale-95 transition">
+      Далее <i class="fa-solid fa-arrow-right text-xs ml-1"></i>
+    </button>
+  </div>
+
+  <div id="screen-3" class="screen flex-1 p-6 flex flex-col justify-between hidden">
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <button onclick="goToScreen(2)" class="text-slate-400 text-xs"><i class="fa-solid fa-chevron-left"></i> Назад</button>
+        <span class="text-xs font-bold text-primary-600 bg-primary-50 px-2.5 py-1 rounded-full">Шаг 2 из 2</span>
+      </div>
+      <div>
+        <h2 class="text-xl font-bold">О чём нам поговорить</h2>
+        <p class="text-xs text-slate-500 mt-1 leading-relaxed">Ваши ответы помогут нам заранее настроиться на главное — на то, что действительно важно для развития вашего ребёнка. Пишите так, как чувствуете.</p>
+      </div>
+      <div class="space-y-3.5">
+        <div class="space-y-1">
+          <label class="block text-[11px] font-semibold">Что у ребёнка получается, чем он увлечён и чем вы им гордитесь?</label>
+          <textarea id="q-success" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs outline-none bg-slate-50 resize-none"></textarea>
+        </div>
+        <div class="space-y-1">
+          <label class="block text-[11px] font-semibold">Что вас тревожит или даётся ребёнку непросто?</label>
+          <textarea id="q-issues" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs outline-none bg-slate-50 resize-none"></textarea>
+        </div>
+        <div class="space-y-1">
+          <label class="block text-[11px] font-semibold">Что для вас важно обсудить ради развития ребёнка?</label>
+          <textarea id="q-topics" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs outline-none bg-slate-50 resize-none"></textarea>
+        </div>
+        <div class="space-y-1">
+          <label class="block text-[11px] font-semibold">Чего вы ждёте от нашей встречи? Какой итог был бы для вас ценным?</label>
+          <textarea id="q-expectations" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs outline-none bg-slate-50 resize-none"></textarea>
+        </div>
+      </div>
+    </div>
+    <button onclick="submitBooking()" class="mt-4 w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-2xl active:scale-95 transition">
+      <i class="fa-solid fa-paper-plane text-xs mr-1"></i> Отправить запись
+    </button>
+  </div>
+
+  <div id="screen-4" class="screen flex-1 p-6 flex flex-col justify-between hidden text-center">
+    <div class="space-y-5 my-auto">
+      <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl"><i class="fa-solid fa-check"></i></div>
+      <div class="space-y-2">
+        <h2 class="text-2xl font-bold">Спасибо за запись!</h2>
+        <p class="text-xs text-slate-500 max-w-xs mx-auto">Мы получили ваши ответы и ждём встречи. До разговора!</p>
+      </div>
+      <div class="bg-slate-50 rounded-2xl p-4 text-left border border-slate-100 space-y-2 text-xs">
+        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Детали встречи</div>
+        <div class="flex justify-between"><span class="text-slate-500">Ребёнок:</span><span id="summary-name" class="font-semibold"></span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Дата и время:</span><span id="summary-slot" class="font-semibold text-primary-600"></span></div>
+      </div>
+    </div>
+    <button onclick="resetFlow()" class="mt-4 w-full py-3.5 bg-slate-900 text-white font-semibold rounded-2xl">На главную</button>
+  </div>
+</div>
+
+<!-- КАБИНЕТ -->
+<div id="teacher-dashboard" class="flex-1 flex flex-col bg-slate-50 hidden">
+  <div class="flex-1 p-5 overflow-y-auto space-y-5">
+    <div class="bg-primary-700 text-white p-4 rounded-2xl flex items-center justify-between">
+      <div><div class="text-[11px] text-primary-100 uppercase tracking-wider font-semibold">Кабинет</div><h3 class="text-base font-bold">@toriya_nova</h3></div>
+      <button onclick="lockTeacherDashboard()" class="px-3 py-1.5 bg-white/10 rounded-xl text-xs"><i class="fa-solid fa-lock"></i> Выйти</button>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="bg-white p-4 rounded-2xl border border-slate-100"><div class="text-slate-400 text-xs">Заявки</div><div id="dash-requests-count" class="text-2xl font-bold mt-1">0</div></div>
+      <div class="bg-white p-4 rounded-2xl border border-slate-100"><div class="text-slate-400 text-xs">Свободное время</div><div id="dash-slots-count" class="text-2xl font-bold text-primary-600 mt-1">0</div></div>
+    </div>
+    <div class="flex bg-slate-200/70 p-1 rounded-xl">
+      <button onclick="switchDashTab('requests')" id="tab-btn-requests" class="flex-1 py-2 text-xs font-semibold rounded-lg bg-white shadow-sm">Заявки</button>
+      <button onclick="switchDashTab('slots')" id="tab-btn-slots" class="flex-1 py-2 text-xs font-semibold rounded-lg text-slate-500">Расписание</button>
+    </div>
+    <div id="dash-tab-requests" class="space-y-3">
+      <div class="text-right"><button onclick="clearAllRequests()" class="text-[11px] text-rose-500">Очистить все</button></div>
+      <div id="dash-requests-list" class="space-y-3"></div>
+    </div>
+    <div id="dash-tab-slots" class="space-y-3 hidden">
+      <div class="bg-white p-4 rounded-2xl border border-slate-100 space-y-3">
+        <input type="date" id="new-slot-date" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50">
+        <input type="time" id="new-slot-time" value="16:00" class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50">
+        <button onclick="addTeacherSlot()" class="w-full py-2.5 bg-primary-600 text-white font-semibold text-xs rounded-xl"><i class="fa-solid fa-plus mr-1"></i> Добавить время</button>
+      </div>
+      <div id="dash-slots-list" class="space-y-2"></div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const tg = window.Telegram && window.Telegram.WebApp;
+const INIT = tg ? tg.initData : '';
+const tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+let isTeacherAuthenticated = false, adminPass = '', adminData = {slots: [], requests: []};
+let freeSlots = [], bookingData = {slotId: null, slotText: ''};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function api(path, body) {
+  const r = await fetch('/api/' + path, {
+    method: body ? 'POST' : 'GET',
+    headers: {'Content-Type': 'application/json', 'X-Init-Data': INIT},
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'Ошибка');
+  return j;
+}
+
+window.onload = async function () {
+  if (tg) { tg.ready(); tg.expand(); }
+  if (tgUser) $('user-telegram').value = tgUser.username ? '@' + tgUser.username : [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ');
+  else $('user-telegram').placeholder = 'Откройте через Telegram';
+  const t = new Date(); t.setDate(t.getDate() + 1);
+  $('new-slot-date').value = t.toISOString().split('T')[0];
+  try { if ((await api('me')).owner) { $('dashboard-toggle-btn').classList.remove('hidden'); $('dashboard-toggle-btn').classList.add('flex'); } } catch (e) {}
+  loadSlots();
+};
+
+async function loadSlots() {
+  try { freeSlots = (await api('slots')).slots; } catch (e) { freeSlots = []; }
+  renderSlotsForClient();
+}
+
+function goToScreen(n) {
+  if (n === 3) {
+    if (!$('student-name').value.trim()) return showToast('Введите имя и фамилию ребёнка');
+    if (!bookingData.slotId) return showToast('Выберите время для встречи');
+  }
+  for (let i = 1; i <= 4; i++) $('screen-' + i).classList.add('hidden');
+  $('screen-' + n).classList.remove('hidden');
+}
+
+function openTeacherAuthModal() {
+  if (isTeacherAuthenticated) return toggleTeacherDashboardView(true);
+  $('auth-input').value = '';
+  $('auth-modal').classList.remove('hidden');
+}
+function closeTeacherAuthModal() { $('auth-modal').classList.add('hidden'); }
+
+async function verifyTeacherAccess() {
+  const pass = $('auth-input').value.trim();
+  try {
+    adminData = await api('admin', {action: 'list', password: pass});
+    adminPass = pass; isTeacherAuthenticated = true;
+    closeTeacherAuthModal(); toggleTeacherDashboardView(true);
+  } catch (e) { showToast('Неверный пароль'); }
+}
+function lockTeacherDashboard() {
+  isTeacherAuthenticated = false; adminPass = '';
+  toggleTeacherDashboardView(false);
+}
+function toggleTeacherDashboardView(show) {
+  $('client-flow').classList.toggle('hidden', show);
+  $('teacher-dashboard').classList.toggle('hidden', !show);
+  $('app-subtitle').textContent = show ? 'Панель управления' : 'Запись на разговор';
+  $('lock-icon').className = show ? 'fa-solid fa-lock-open text-emerald-600' : 'fa-solid fa-lock text-primary-600';
+  if (show) renderTeacherDashboard(); else loadSlots();
+}
+
+async function adminCall(action, extra) {
+  try { adminData = await api('admin', Object.assign({action, password: adminPass}, extra)); renderTeacherDashboard(); return true; }
+  catch (e) { showToast(e.message); return false; }
+}
+
+function renderSlotsForClient() {
+  const c = $('available-slots-container');
+  c.innerHTML = '';
+  $('no-slots-msg').classList.toggle('hidden', freeSlots.length > 0);
+  freeSlots.forEach(slot => {
+    const sel = bookingData.slotId === slot.id;
+    const d = formatDateReadable(slot.date);
+    const el = document.createElement('div');
+    el.className = 'p-3 rounded-xl border cursor-pointer flex items-center justify-between ' + (sel ? 'border-primary-500 bg-primary-50' : 'border-slate-200 bg-white');
+    el.onclick = () => { bookingData.slotId = slot.id; bookingData.slotText = d + ', ' + slot.time; renderSlotsForClient(); };
+    el.innerHTML = '<div><div class="text-xs font-semibold">' + esc(d) + '</div><div class="text-xs text-primary-600">' + esc(slot.time) + '</div></div>' +
+      '<div class="w-5 h-5 rounded-full border text-[10px] flex items-center justify-center ' + (sel ? 'border-primary-500 bg-primary-500 text-white' : 'border-slate-300') + '">' + (sel ? '<i class="fa-solid fa-check"></i>' : '') + '</div>';
+    c.appendChild(el);
+  });
+}
+
+async function submitBooking() {
+  try {
+    const r = await api('book', {
+      name: $('student-name').value, phone: $('user-phone').value, slotId: bookingData.slotId,
+      success: $('q-success').value, issues: $('q-issues').value, topics: $('q-topics').value, expectations: $('q-expectations').value
+    });
+    $('summary-name').textContent = $('student-name').value.trim();
+    $('summary-slot').textContent = bookingData.slotText;
+    goToScreen(4);
+  } catch (e) {
+    showToast(e.message);
+    if (/занято/.test(e.message)) { bookingData.slotId = null; await loadSlots(); goToScreen(2); }
+  }
+}
+
+function resetFlow() {
+  bookingData = {slotId: null, slotText: ''};
+  ['student-name', 'user-phone', 'q-success', 'q-issues', 'q-topics', 'q-expectations'].forEach(id => $(id).value = '');
+  loadSlots(); goToScreen(1);
+}
+
+function switchDashTab(tab) {
+  $('dash-tab-requests').classList.toggle('hidden', tab !== 'requests');
+  $('dash-tab-slots').classList.toggle('hidden', tab !== 'slots');
+  const on = 'flex-1 py-2 text-xs font-semibold rounded-lg bg-white shadow-sm', off = 'flex-1 py-2 text-xs font-semibold rounded-lg text-slate-500';
+  $('tab-btn-requests').className = tab === 'requests' ? on : off;
+  $('tab-btn-slots').className = tab === 'slots' ? on : off;
+}
+
+function renderTeacherDashboard() {
+  if (!isTeacherAuthenticated) return;
+  const {requests: reqs, slots} = adminData;
+  $('dash-requests-count').textContent = reqs.length;
+  $('dash-slots-count').textContent = slots.filter(s => !s.booked).length;
+  const rl = $('dash-requests-list');
+  rl.innerHTML = reqs.length ? '' : '<div class="text-center py-6 text-xs text-slate-400 bg-white rounded-xl">Заявок пока нет</div>';
+  reqs.forEach(r => {
+    const el = document.createElement('div');
+    el.className = 'bg-white p-4 rounded-2xl border border-slate-100 space-y-2.5';
+    el.innerHTML =
+      '<div class="flex justify-between items-start"><div><h4 class="text-xs font-bold">' + esc(r.studentName) + '</h4><div class="text-[11px] text-primary-600 font-medium">' + esc(r.slotText) + '</div></div><span class="text-[10px] text-slate-400">' + esc(new Date(r.timestamp).toLocaleString('ru-RU', {dateStyle: 'short', timeStyle: 'short'})) + '</span></div>' +
+      '<div class="text-[11px] text-slate-600 space-y-1 bg-slate-50 p-2.5 rounded-xl">' +
+      '<div><b>Контакты:</b> ' + esc(r.telegram) + ' | ' + esc(r.phone) + '</div>' +
+      '<div><b>Получается и радует:</b> ' + esc(r.success) + '</div>' +
+      '<div><b>Тревожит / непросто:</b> ' + esc(r.issues) + '</div>' +
+      '<div><b>Важно обсудить:</b> ' + esc(r.topics) + '</div>' +
+      '<div><b>Ожидания от встречи:</b> ' + esc(r.expectations) + '</div></div>' +
+      '<div class="text-right"><button class="text-[11px] text-rose-500"><i class="fa-solid fa-trash-can"></i> Удалить</button></div>';
+    el.querySelector('button').onclick = () => adminCall('delReq', {id: r.id});
+    rl.appendChild(el);
+  });
+  const sl = $('dash-slots-list');
+  sl.innerHTML = slots.length ? '' : '<div class="text-center py-6 text-xs text-slate-400 bg-white rounded-xl">Время не добавлено</div>';
+  slots.forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'bg-white p-3 rounded-xl border border-slate-100 flex items-center justify-between text-xs';
+    el.innerHTML = '<div><span class="font-medium">' + esc(formatDateReadable(s.date)) + ', ' + esc(s.time) + '</span> <span class="text-[10px] px-1.5 py-0.5 rounded ' + (s.booked ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600') + '">' + (s.booked ? 'Занято' : 'Свободно') + '</span></div><button class="text-slate-400 px-2"><i class="fa-solid fa-xmark"></i></button>';
+    el.querySelector('button').onclick = () => adminCall('delSlot', {id: s.id});
+    sl.appendChild(el);
+  });
+}
+
+async function addTeacherSlot() {
+  const d = $('new-slot-date').value, t = $('new-slot-time').value;
+  if (!d || !t) return showToast('Выберите дату и время');
+  if (await adminCall('addSlot', {date: d, time: t})) showToast('Время добавлено');
+}
+function clearAllRequests() { adminCall('clear'); }
+function formatDateReadable(s) { return new Date(s).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long'}); }
+function showToast(m) {
+  const t = $('toast'); $('toast-message').textContent = m;
+  t.classList.remove('-translate-y-20', 'opacity-0');
+  setTimeout(() => t.classList.add('-translate-y-20', 'opacity-0'), 3000);
+}
+</script>
+</body>
+</html>
